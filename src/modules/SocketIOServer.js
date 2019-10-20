@@ -1,49 +1,17 @@
-var express = require("express"),
-  expressSocketApp = express(),
-  expressWebApp = express(),
-  socketio = require("socket.io"),
-  http = require("http"),
-  socketServer = http.createServer(expressSocketApp),
-  webServer = http.createServer(expressWebApp),
-  uuid = require("uuid"),
-  path = require("path"),
-  rooms = {},
-  userIds = {},
-  votes = {
-    peers: {},
-    conversations: {}
-  },
-  conversations = {},
-  talkDuration = 120;
+const socketio = require("socket.io");
+const uuid = require("uuid");
+
+let rooms = {};
+let userIds = {};
+let votes = {
+  peers: {},
+  conversations: {}
+};
+let conversations = {};
+let talkDuration = 120;
 
 // TODO: votes, users and conversations should handle multiple rooms
-expressSocketApp.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept"
-  );
-  next();
-});
-expressWebApp.use(express.static(__dirname + "/../public"));
-
-expressWebApp.get("/room", function(request, response) {
-  response.sendFile(path.resolve(__dirname, "..\\public\\index.html"));
-});
-
-expressWebApp.get("/room/:roomId", function(request, response) {
-  response.sendFile(path.resolve(__dirname, "..\\public\\index.html"));
-});
-
-exports.run = function(config) {
-  webServer.listen(80, () => {
-    console.log("Web Server Listening on", 80);
-  });
-
-  socketServer.listen(config.PORT, () => {
-    console.log("Socket Server Listening on", config.PORT);
-  });
-
+exports.start = function(socketServer) {
   socketio
     .listen(socketServer, {
       log: false
