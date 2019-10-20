@@ -1,12 +1,12 @@
 const events = require("./Events");
 const socketio = require("socket.io");
 
-exports.start = function(socketServer) {
+exports.start = socketServer => {
   socketio
     .listen(socketServer, {
       log: false
     })
-    .on("connection", function(socket) {
+    .on("connection", socket => {
       events.handle(socket);
     });
 };

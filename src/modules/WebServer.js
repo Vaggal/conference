@@ -14,15 +14,15 @@ expressWebApp.use((req, res, next) => {
 });
 expressWebApp.use(express.static(__dirname + "/../public"));
 
-expressWebApp.get("/room", function(request, response) {
+expressWebApp.get("/room", (request, response) => {
   response.sendFile(path.resolve(__dirname, "..\\public\\index.html"));
 });
 
-expressWebApp.get("/room/:roomId", function(request, response) {
+expressWebApp.get("/room/:roomId", (request, response) => {
   response.sendFile(path.resolve(__dirname, "..\\public\\index.html"));
 });
 
-exports.start = function() {
+exports.start = () => {
   webServer.listen(80, () => {
     console.log("Web Server Listening on", 80);
   });
