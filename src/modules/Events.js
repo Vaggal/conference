@@ -73,7 +73,7 @@ exports.handle = socket => {
     emitVotesUpdateEvent(rooms[currentRoom]);
   });
 
-  socket.on("conversation.type.select", conversation => {
+  socket.on("conversation.type.selected", conversation => {
     // TODO: We need to improve the naming of these interactions
     votes.conversations[currentRoom][conversation.type]++;
 
@@ -83,7 +83,7 @@ exports.handle = socket => {
     let totalConversationVotes = looseVotes + byTurnVotes;
     if (
       totalConversationVotes === userIds[currentRoom] + 1 &&
-      userIds[currentRoom] + 1 >= 3
+      userIds[currentRoom] + 1 >= 2
     ) {
       if (looseVotes > byTurnVotes) {
         conversations[currentRoom].type = "loose";
@@ -131,7 +131,7 @@ exports.handle = socket => {
 
   function emitConversationType(room, conversation) {
     room.forEach(socket => {
-      socket.emit("conversation.type", conversation);
+      socket.emit("conversation.type.set", conversation);
     });
   }
 
