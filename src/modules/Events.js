@@ -15,7 +15,7 @@ let id;
 
 exports.handle = socket => {
   // The use of 'fn' callback is explained here: https://socket.io/docs/#Sending-and-getting-data-acknowledgements
-  // These events are emitted by the client code that we have written
+  // These events are emitted by the client code in conference-vue project
   socket.on("init", (data, fn) => {
     let existingRoom = data ? true : false;
 
