@@ -104,15 +104,24 @@ exports.handle = socket => {
     }
     console.log("Peer disconnected from room", currentRoom);
 
-    delete rooms[currentRoom][rooms[currentRoom].indexOf(socket)];
+    rooms[currentRoom].splice(rooms[currentRoom].indexOf(socket), 1);
+
     // TODO: If all peers have disconnected from a room, delete whole room
-    rooms[currentRoom].forEach(socket => {
-      if (socket) {
-        socket.emit("peer.disconnected", {
-          id: id
-        });
-      }
-    });
+    if (rooms[currentRoom].length === 0) {
+      delete rooms[currentRoom];
+      delete userIds[currentRoom];
+      votes.peers = {};
+      delete votes.conversations[currentRoom];
+      delete conversations[currentRoom];
+    } else {
+      rooms[currentRoom].forEach(socket => {
+        if (socket) {
+          socket.emit("peer.disconnected", {
+            id: id
+          });
+        }
+      });
+    }
   });
 
   function emitConnectionEvent(room) {
