@@ -27,9 +27,9 @@ exports.handle = socket => {
         rooms[currentRoom].conversation
       ); // It returns as an ack the room and user id to the client
 
-      emitConnectionEvent(rooms[currentRoom].sockets); // We emit the connection event to the rest of the sockets before adding the new one
+      emitConnectionEvent(rooms[currentRoom]); // We emit the connection event to the rest of the sockets before adding the new one
       rooms[currentRoom].sockets.push(socket);
-      emitVotesUpdateEvent(rooms[currentRoom].sockets);
+      emitVotesUpdateEvent(rooms[currentRoom]);
 
       console.log(
         "Peer connected to room",
@@ -68,7 +68,7 @@ exports.handle = socket => {
 
   socket.on("votes.increment", user => {
     rooms[currentRoom].votes.peers[user.id]++;
-    emitVotesUpdateEvent(rooms[currentRoom].sockets);
+    emitVotesUpdateEvent(rooms[currentRoom]);
   });
 
   socket.on("conversation.type.selected", conversation => {
@@ -90,11 +90,8 @@ exports.handle = socket => {
         rooms[currentRoom].conversation.type = "loose"; // TODO: We need to find a better solution for this
       }
 
-      emitConversationType(
-        rooms[currentRoom].sockets,
-        rooms[currentRoom].conversation
-      );
-      talkLoop(rooms[currentRoom].sockets, 30);
+      emitConversationType(rooms[currentRoom]);
+      talkLoop(rooms[currentRoom], 30);
     }
   });
 
@@ -121,33 +118,33 @@ exports.handle = socket => {
   });
 
   function emitConnectionEvent(room) {
-    room.forEach(socket => {
+    room.sockets.forEach(socket => {
       socket.emit("peer.connected", {
-        id: rooms[currentRoom].usersCount
+        id: room.usersCount
       });
     });
   }
 
   function emitVotesUpdateEvent(room) {
-    room.forEach(socket => {
-      socket.emit("votes.update", rooms[currentRoom].votes.peers);
+    room.sockets.forEach(socket => {
+      socket.emit("votes.update", room.votes.peers);
     });
   }
 
-  function emitConversationType(room, conversation) {
-    room.forEach(socket => {
-      socket.emit("conversation.type.set", conversation);
+  function emitConversationType(room) {
+    room.sockets.forEach(socket => {
+      socket.emit("conversation.type.set", room.conversation);
     });
   }
 
   function emitTimeLeft(room, secondsLeft) {
-    room.forEach(socket => {
+    room.sockets.forEach(socket => {
       socket.emit("time.left", secondsLeft);
     });
   }
 
   function emitActivePeer(room, peerId) {
-    room.forEach(socket => {
+    room.sockets.forEach(socket => {
       socket.emit("active.peer", peerId);
     });
   }
@@ -179,14 +176,14 @@ exports.handle = socket => {
     return randomMaxId;
   }
 
-  function talkLoop(roomSockets, secondsLeft) {
-    emitTimeLeft(roomSockets, secondsLeft);
+  function talkLoop(room, secondsLeft) {
+    emitTimeLeft(room, secondsLeft);
 
     setTimeout(() => {
       let activePeerId = findActivePeer();
-      emitActivePeer(roomSockets, activePeerId);
-      emitVotesUpdateEvent(roomSockets);
-      talkLoop(roomSockets, talkDuration);
+      emitActivePeer(room, activePeerId);
+      emitVotesUpdateEvent(room);
+      talkLoop(room, talkDuration);
     }, secondsLeft * 1000);
   }
 };
