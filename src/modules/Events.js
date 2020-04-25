@@ -1,17 +1,10 @@
-const uuid = require("uuid");
-
-// TODO: votes, users and conversations should handle multiple rooms
+const Room = require("../models/Room");
+const Votes = require("../models/Votes");
+const Conversation = require("../models/Conversation");
 
 let rooms = {};
-let userIds = {};
-let votes = {
-  peers: {},
-  conversations: {}
-};
-let conversations = {};
 let talkDuration = 120;
 let currentRoom;
-let id;
 
 exports.handle = socket => {
   // The use of 'fn' callback is explained here: https://socket.io/docs/#Sending-and-getting-data-acknowledgements
@@ -21,80 +14,87 @@ exports.handle = socket => {
 
     if (existingRoom) {
       currentRoom = data.room;
-    } else {
-      currentRoom = uuid.v4();
-    }
-    var room = rooms[currentRoom];
-
-    if (!existingRoom) {
-      rooms[currentRoom] = [socket];
-      id = userIds[currentRoom] = 0;
-      votes.peers[id] = 0;
-      votes.conversations[currentRoom] = {
-        byturn: 0,
-        loose: 0
-      };
-      conversations[currentRoom] = {};
-
-      fn(currentRoom, id); // It returns as an ack the room and user id to the client
-
-      console.log("Room created, with #", currentRoom);
-    } else {
-      if (!room) {
+      console.log("Data: ", data);
+      if (!rooms[currentRoom]) {
         console.log("NOT ROOM!");
         return;
       }
-      userIds[currentRoom] += 1;
-      id = userIds[currentRoom];
-      votes.peers[id] = 0;
-      fn(currentRoom, id); // It returns as an ack the room and user id to the client
+      rooms[currentRoom].usersCount++;
+      rooms[currentRoom].votes.peers[rooms[currentRoom].usersCount] = 0;
+      fn(
+        currentRoom,
+        rooms[currentRoom].usersCount,
+        rooms[currentRoom].conversation
+      ); // It returns as an ack the room and user id to the client
 
-      emitConnectionEvent(room);
-      room[id] = socket;
-      emitVotesUpdateEvent(room);
+      emitConnectionEvent(rooms[currentRoom].sockets); // We emit the connection event to the rest of the sockets before adding the new one
+      rooms[currentRoom].sockets.push(socket);
+      emitVotesUpdateEvent(rooms[currentRoom].sockets);
 
-      console.log("Peer connected to room", currentRoom, "with #", id);
+      console.log(
+        "Peer connected to room",
+        currentRoom,
+        "with #",
+        rooms[currentRoom].usersCount
+      );
+    } else {
+      let roomObj = new Room(new Votes(), new Conversation());
+      currentRoom = roomObj.id;
+      rooms[currentRoom] = roomObj;
+      rooms[currentRoom].votes.peers[0] = 0;
+
+      rooms[currentRoom].sockets.push(socket);
+
+      fn(
+        currentRoom,
+        rooms[currentRoom].usersCount,
+        rooms[currentRoom].conversation
+      ); // It returns as an ack the room,the user id and the conversation to the client
+
+      console.log("Room created, with #", currentRoom);
     }
   });
 
   socket.on("msg", data => {
     var to = parseInt(data.to, 10);
     // TODO: how do we know the current room here?
-    if (rooms[currentRoom] && rooms[currentRoom][to]) {
+    if (rooms[currentRoom] && rooms[currentRoom].sockets[to]) {
       console.log("Redirecting message to", to, "by", data.by);
-      rooms[currentRoom][to].emit("msg", data);
+      rooms[currentRoom].sockets[to].emit("msg", data);
     } else {
       console.warn("Invalid user");
     }
   });
 
   socket.on("votes.increment", user => {
-    votes.peers[user.id]++;
-    emitVotesUpdateEvent(rooms[currentRoom]);
+    rooms[currentRoom].votes.peers[user.id]++;
+    emitVotesUpdateEvent(rooms[currentRoom].sockets);
   });
 
   socket.on("conversation.type.selected", conversation => {
-    // TODO: We need to improve the naming of these interactions
-    votes.conversations[currentRoom][conversation.type]++;
+    rooms[currentRoom].votes.conversation[conversation.type]++;
 
-    let looseVotes = votes.conversations[currentRoom].loose;
-    let byTurnVotes = votes.conversations[currentRoom].byturn;
-
+    let looseVotes = rooms[currentRoom].votes.conversation.loose;
+    let byTurnVotes = rooms[currentRoom].votes.conversation.byturn;
     let totalConversationVotes = looseVotes + byTurnVotes;
+
     if (
-      totalConversationVotes === userIds[currentRoom] + 1 &&
-      userIds[currentRoom] + 1 >= 2
+      totalConversationVotes === rooms[currentRoom].usersCount + 1 &&
+      rooms[currentRoom].usersCount + 1 >= 2
     ) {
       if (looseVotes > byTurnVotes) {
-        conversations[currentRoom].type = "loose";
+        rooms[currentRoom].conversation.type = "loose";
       } else if (looseVotes < byTurnVotes) {
-        conversations[currentRoom].type = "byturn";
+        rooms[currentRoom].conversation.type = "byturn";
       } else {
-        conversations[currentRoom].type = "loose"; // TODO: We need to find a better solution for this
+        rooms[currentRoom].conversation.type = "loose"; // TODO: We need to find a better solution for this
       }
 
-      emitConversationType(rooms[currentRoom], conversations[currentRoom]);
-      talkLoop(rooms[currentRoom], 30);
+      emitConversationType(
+        rooms[currentRoom].sockets,
+        rooms[currentRoom].conversation
+      );
+      talkLoop(rooms[currentRoom].sockets, 30);
     }
   });
 
@@ -104,20 +104,16 @@ exports.handle = socket => {
     }
     console.log("Peer disconnected from room", currentRoom);
 
-    rooms[currentRoom].splice(rooms[currentRoom].indexOf(socket), 1);
-
-    // TODO: If all peers have disconnected from a room, delete whole room
-    if (rooms[currentRoom].length === 0) {
+    if (rooms[currentRoom].sockets.length === 1) {
       delete rooms[currentRoom];
-      delete userIds[currentRoom];
-      votes.peers = {};
-      delete votes.conversations[currentRoom];
-      delete conversations[currentRoom];
     } else {
-      rooms[currentRoom].forEach(socket => {
+      let socketIndex = rooms[currentRoom].sockets.indexOf(socket);
+      rooms[currentRoom].sockets.splice(socketIndex, 1);
+
+      rooms[currentRoom].sockets.forEach(socket => {
         if (socket) {
           socket.emit("peer.disconnected", {
-            id: id
+            id: rooms[currentRoom].usersCount
           });
         }
       });
@@ -127,14 +123,14 @@ exports.handle = socket => {
   function emitConnectionEvent(room) {
     room.forEach(socket => {
       socket.emit("peer.connected", {
-        id: id
+        id: rooms[currentRoom].usersCount
       });
     });
   }
 
   function emitVotesUpdateEvent(room) {
     room.forEach(socket => {
-      socket.emit("votes.update", votes.peers);
+      socket.emit("votes.update", rooms[currentRoom].votes.peers);
     });
   }
 
@@ -160,7 +156,7 @@ exports.handle = socket => {
     let maxIds = [];
     let maxVotes = 0;
 
-    Object.entries(votes.peers).forEach(entry => {
+    Object.entries(rooms[currentRoom].votes.peers).forEach(entry => {
       let peerVotes = entry[1];
       let peerId = entry[0];
 
@@ -174,7 +170,7 @@ exports.handle = socket => {
       }
 
       // We reset the peer's votes
-      votes.peers[peerId] = 0;
+      rooms[currentRoom].votes.peers[peerId] = 0;
     });
 
     // We select a random person from the array
@@ -183,14 +179,14 @@ exports.handle = socket => {
     return randomMaxId;
   }
 
-  function talkLoop(room, secondsLeft) {
-    emitTimeLeft(room, secondsLeft);
+  function talkLoop(roomSockets, secondsLeft) {
+    emitTimeLeft(roomSockets, secondsLeft);
 
     setTimeout(() => {
       let activePeerId = findActivePeer();
-      emitActivePeer(room, activePeerId);
-      emitVotesUpdateEvent(room);
-      talkLoop(room, talkDuration);
+      emitActivePeer(roomSockets, activePeerId);
+      emitVotesUpdateEvent(roomSockets);
+      talkLoop(roomSockets, talkDuration);
     }, secondsLeft * 1000);
   }
 };
