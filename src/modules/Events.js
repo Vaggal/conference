@@ -82,16 +82,21 @@ exports.handle = socket => {
       totalConversationVotes === rooms[currentRoomId].usersCount + 1 &&
       rooms[currentRoomId].usersCount + 1 >= 2
     ) {
+      let type = "";
       if (looseVotes > byTurnVotes) {
-        rooms[currentRoomId].conversation.type = "loose";
+        type = "loose";
       } else if (looseVotes < byTurnVotes) {
-        rooms[currentRoomId].conversation.type = "byturn";
+        type = "byturn";
       } else {
-        rooms[currentRoomId].conversation.type = "loose"; // TODO: We need to find a better solution for this
+        // TODO: We need to find a better solution for the case where we have equal votes
+        type = "loose";
       }
-
+      rooms[currentRoomId].conversation.type = type;
       emitConversationType(rooms[currentRoomId]);
-      talkLoop(rooms[currentRoomId], 30);
+
+      if (type === "byturn") {
+        talkLoop(rooms[currentRoomId], 30);
+      }
     }
   });
 
