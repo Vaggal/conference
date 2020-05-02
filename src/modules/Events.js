@@ -167,6 +167,7 @@ exports.handle = socket => {
         // We reset the array as we have found a new higher value
         maxIds = [];
         maxIds.push(peerId);
+        maxVotes = peerVotes;
       } else if (peerVotes == maxVotes) {
         // We add the peerId to the list as the peer has the same votes as the current maxVotes
         maxIds.push(peerId);
@@ -186,10 +187,12 @@ exports.handle = socket => {
     emitTimeLeft(room, secondsLeft);
 
     setTimeout(() => {
-      let activePeerId = findActivePeer();
-      emitActivePeer(room, activePeerId);
-      emitVotesUpdateEvent(room);
-      talkLoop(room, talkDuration);
+      if (rooms[currentRoomId] !== undefined) {
+        let activePeerId = findActivePeer();
+        emitActivePeer(room, activePeerId);
+        emitVotesUpdateEvent(room);
+        talkLoop(room, talkDuration);
+      }
     }, secondsLeft * 1000);
   }
 };
