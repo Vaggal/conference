@@ -1,6 +1,8 @@
 const Room = require("../models/Room");
 const Votes = require("../models/Votes");
 const Conversation = require("../models/Conversation");
+const Chat = require("../models/Chat");
+const Comment = require("../models/Comment");
 
 let rooms = {};
 let talkDuration = 120;
@@ -38,7 +40,7 @@ exports.handle = (socket) => {
         rooms[currentRoomId].usersCount
       );
     } else {
-      let roomObj = new Room(new Votes(), new Conversation());
+      let roomObj = new Room(new Votes(), new Conversation(), new Chat());
       currentRoomId = roomObj.id;
       socket.join(currentRoomId);
       rooms[currentRoomId] = roomObj;
@@ -64,6 +66,12 @@ exports.handle = (socket) => {
     } else {
       console.warn("Invalid user");
     }
+  });
+
+  socket.on("comment", (data) => {
+    let comment = new Comment(data.by, data.comment);
+    rooms[currentRoomId].chat.comments.push(comment);
+    emitCommentEvent(rooms[currentRoomId], comment);
   });
 
   socket.on("votes.increment", (user) => {
@@ -140,6 +148,12 @@ exports.handle = (socket) => {
   function emitConversationType(room) {
     room.sockets.forEach((socket) => {
       socket.emit("conversation.type.set", room.conversation);
+    });
+  }
+
+  function emitCommentEvent(room, comment) {
+    room.sockets.forEach((socket) => {
+      socket.emit("comment", comment);
     });
   }
 
