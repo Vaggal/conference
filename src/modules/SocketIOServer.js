@@ -1,12 +1,12 @@
 const events = require("./Events");
 const socketio = require("socket.io");
 
-exports.start = socketServer => {
+exports.start = (socketServer) => {
   socketio
     .listen(socketServer, {
-      log: false
+      log: false,
     })
-    .on("connection", socket => {
+    .on("connection", (socket) => {
       socket.use((packet, next) => {
         let roomsKeys = Object.keys(socket.rooms);
         if (roomsKeys.length > 1) {

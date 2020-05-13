@@ -6,7 +6,7 @@ let rooms = {};
 let talkDuration = 120;
 let currentRoomId;
 
-exports.handle = socket => {
+exports.handle = (socket) => {
   // The use of 'fn' callback is explained here: https://socket.io/docs/#Sending-and-getting-data-acknowledgements
   // These events are emitted by the client code in conference-vue project
   socket.on("init", (data, fn) => {
@@ -56,7 +56,7 @@ exports.handle = socket => {
     }
   });
 
-  socket.on("msg", data => {
+  socket.on("msg", (data) => {
     var to = parseInt(data.to, 10);
     if (rooms[currentRoomId] && rooms[currentRoomId].sockets[to]) {
       console.log("Redirecting message to", to, "by", data.by);
@@ -66,12 +66,12 @@ exports.handle = socket => {
     }
   });
 
-  socket.on("votes.increment", user => {
+  socket.on("votes.increment", (user) => {
     rooms[currentRoomId].votes.peers[user.id]++;
     emitVotesUpdateEvent(rooms[currentRoomId]);
   });
 
-  socket.on("conversation.type.selected", conversation => {
+  socket.on("conversation.type.selected", (conversation) => {
     rooms[currentRoomId].votes.conversation[conversation.type]++;
 
     let looseVotes = rooms[currentRoomId].votes.conversation.loose;
@@ -113,10 +113,10 @@ exports.handle = socket => {
       let socketIndex = rooms[currentRoomId].sockets.indexOf(socket);
       rooms[currentRoomId].sockets.splice(socketIndex, 1);
 
-      rooms[currentRoomId].sockets.forEach(socket => {
+      rooms[currentRoomId].sockets.forEach((socket) => {
         if (socket) {
           socket.emit("peer.disconnected", {
-            id: rooms[currentRoomId].usersCount
+            id: rooms[currentRoomId].usersCount,
           });
         }
       });
@@ -124,33 +124,33 @@ exports.handle = socket => {
   });
 
   function emitConnectionEvent(room) {
-    room.sockets.forEach(socket => {
+    room.sockets.forEach((socket) => {
       socket.emit("peer.connected", {
-        id: room.usersCount
+        id: room.usersCount,
       });
     });
   }
 
   function emitVotesUpdateEvent(room) {
-    room.sockets.forEach(socket => {
+    room.sockets.forEach((socket) => {
       socket.emit("votes.update", room.votes.peers);
     });
   }
 
   function emitConversationType(room) {
-    room.sockets.forEach(socket => {
+    room.sockets.forEach((socket) => {
       socket.emit("conversation.type.set", room.conversation);
     });
   }
 
   function emitTimeLeft(room, secondsLeft) {
-    room.sockets.forEach(socket => {
+    room.sockets.forEach((socket) => {
       socket.emit("time.left", secondsLeft);
     });
   }
 
   function emitActivePeer(room, peerId) {
-    room.sockets.forEach(socket => {
+    room.sockets.forEach((socket) => {
       socket.emit("active.peer", peerId);
     });
   }
@@ -159,7 +159,7 @@ exports.handle = socket => {
     let maxIds = [];
     let maxVotes = 0;
 
-    Object.entries(rooms[currentRoomId].votes.peers).forEach(entry => {
+    Object.entries(rooms[currentRoomId].votes.peers).forEach((entry) => {
       let peerVotes = entry[1];
       let peerId = entry[0];
 
@@ -197,6 +197,6 @@ exports.handle = socket => {
   }
 };
 
-exports.setCurrentRoomId = roomId => {
+exports.setCurrentRoomId = (roomId) => {
   currentRoomId = roomId;
 };

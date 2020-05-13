@@ -13,7 +13,7 @@ expressSocketApp.use((req, res, next) => {
   next();
 });
 
-exports.start = config => {
+exports.start = (config) => {
   socketServer.listen(config.PORT, () => {
     console.log("Socket Server Listening on", config.PORT);
   });

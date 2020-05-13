@@ -16,5 +16,5 @@ function removeCircularJSON(object) {
 }
 
 module.exports = {
-  removeCircularJSON: removeCircularJSON
+  removeCircularJSON: removeCircularJSON,
 };
