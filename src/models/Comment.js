@@ -1,7 +1,7 @@
 class Comment {
-  constructor(userId, comment) {
+  constructor(userId, message) {
     this.userId = userId;
-    this.comment = comment;
+    this.message = message;
     this.date = new Date();
   }
 }

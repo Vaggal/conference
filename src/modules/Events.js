@@ -32,6 +32,7 @@ exports.handle = (socket) => {
       emitConnectionEvent(rooms[currentRoomId]); // We emit the connection event to the rest of the sockets before adding the new one
       rooms[currentRoomId].sockets.push(socket);
       emitVotesUpdateEvent(rooms[currentRoomId]);
+      // TODO: emit init event
 
       console.log(
         "Peer connected to room",
@@ -68,8 +69,8 @@ exports.handle = (socket) => {
     }
   });
 
-  socket.on("comment", (data) => {
-    let comment = new Comment(data.by, data.comment);
+  socket.on("new-comment", (data) => {
+    let comment = new Comment(data.by, data.message);
     rooms[currentRoomId].chat.comments.push(comment);
     emitCommentEvent(rooms[currentRoomId], comment);
   });
