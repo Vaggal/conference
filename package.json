@@ -3,9 +3,6 @@
   "version": "0.0.1",
   "description": "Conferencing App",
   "main": "src/main.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "author": "Vangelis Galanis",
   
   "dependencies": {
@@ -14,7 +11,7 @@
     "uuid": "^8.2.0"
   },
   "devDependencies": {
-    "eslint": "^7.3.1",
+    "eslint": "^7.5.0",
     "eslint-config-prettier": "^6.11.0",
     "eslint-loader": "^4.0.2",
     "eslint-plugin-prettier": "^3.1.4",
