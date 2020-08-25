@@ -1,4 +1,5 @@
 lib-cov
+.vscode
 *.seed
 *.log
 *.csv
