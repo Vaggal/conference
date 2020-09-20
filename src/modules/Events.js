@@ -70,7 +70,7 @@ exports.handle = (socket) => {
   });
 
   socket.on("new-comment", (data) => {
-    let comment = new Comment(data.id, data.message);
+    let comment = new Comment(data.id, data.message, data.username);
     rooms[currentRoomId].chat.comments.push(comment);
     emitCommentEvent(rooms[currentRoomId], comment);
   });
