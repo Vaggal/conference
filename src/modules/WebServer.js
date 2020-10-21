@@ -12,14 +12,14 @@ expressWebApp.use((req, res, next) => {
   );
   next();
 });
-expressWebApp.use(express.static(__dirname + "/../public"));
+expressWebApp.use(express.static(__dirname + "/../../public"));
 
 expressWebApp.get("/room", (request, response) => {
-  response.sendFile(path.resolve(__dirname, "..\\public\\index.html"));
+  response.sendFile(path.resolve(__dirname, "../../public/index.html"));
 });
 
 expressWebApp.get("/room/:roomId", (request, response) => {
-  response.sendFile(path.resolve(__dirname, "..\\public\\index.html"));
+  response.sendFile(path.resolve(__dirname, "../../public/index.html"));
 });
 
 exports.start = () => {
