@@ -1,8 +1,6 @@
 var config = require("./config/config.json");
-var webServer = require("./modules/WebServer");
-var socketServer = require("./modules/SocketServer");
+var servers = require("./modules/Servers");
 
 config.PORT = process.env.PORT || config.PORT;
 
-socketServer.start(config);
-webServer.start();
+servers.start(config);

@@ -2,6 +2,7 @@ const express = require("express");
 const expressWebApp = express();
 const http = require("http");
 const webServer = http.createServer(expressWebApp);
+const socketIOServer = require("./SocketIOServer");
 const path = require("path");
 
 expressWebApp.use((req, res, next) => {
@@ -22,8 +23,10 @@ expressWebApp.get("/room/:roomId", (request, response) => {
   response.sendFile(path.resolve(__dirname, "../../public/index.html"));
 });
 
-exports.start = () => {
-  webServer.listen(80, () => {
-    console.log("Web Server Listening on", 80);
+exports.start = (config) => {
+  webServer.listen(config.PORT, () => {
+    console.log("Servers Listening on", config.PORT);
   });
+
+  socketIOServer.start(webServer);
 };
