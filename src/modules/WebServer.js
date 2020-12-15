@@ -3,7 +3,9 @@ const expressWebApp = express();
 const http = require("http");
 const webServer = http.createServer(expressWebApp);
 const path = require("path");
+const enforce = require("express-sslify");
 
+expressWebApp.use(enforce.HTTPS());
 expressWebApp.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header(
