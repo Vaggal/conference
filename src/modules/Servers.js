@@ -6,7 +6,7 @@ const socketIOServer = require("./SocketIOServer");
 const path = require("path");
 const enforce = require("express-sslify");
 
-expressWebApp.use(enforce.HTTPS());
+expressWebApp.use(enforce.HTTPS({ trustProtoHeader: true }));
 expressWebApp.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header(
