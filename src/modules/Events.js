@@ -23,6 +23,11 @@ exports.handle = (socket) => {
       }
       rooms[currentRoomId].usersCount++;
       rooms[currentRoomId].votes.peers[rooms[currentRoomId].usersCount] = 0;
+      rooms[currentRoomId].votingState[rooms[currentRoomId].usersCount] = {
+        forPeer: false,
+        forConversation: false,
+      };
+
       fn(
         currentRoomId,
         rooms[currentRoomId].usersCount,
@@ -46,6 +51,10 @@ exports.handle = (socket) => {
       socket.join(currentRoomId);
       rooms[currentRoomId] = roomObj;
       rooms[currentRoomId].votes.peers[0] = 0;
+      rooms[currentRoomId].votingState[0] = {
+        forPeer: false,
+        forConversation: false, // TODO: This will be used to check for user tryng to double vote
+      };
 
       rooms[currentRoomId].sockets.push(socket);
 
@@ -80,8 +89,19 @@ exports.handle = (socket) => {
     emitVotesUpdateEvent(rooms[currentRoomId]);
   });
 
-  socket.on("conversation.type.selected", (conversation) => {
-    rooms[currentRoomId].votes.conversation[conversation.type]++;
+  socket.on("conversation.type.selected", (data) => {
+    if (rooms[currentRoomId].votingState[data.by].forConversation) {
+      // We need to subtract from the other type as the user changed their selection
+      if (data.conversation.type == "loose") {
+        rooms[currentRoomId].votes.conversation["byturn"]--;
+      } else {
+        rooms[currentRoomId].votes.conversation["loose"]--;
+      }
+    } else {
+      rooms[currentRoomId].votingState[data.by].forConversation = true;
+    }
+
+    rooms[currentRoomId].votes.conversation[data.conversation.type]++;
 
     let looseVotes = rooms[currentRoomId].votes.conversation.loose;
     let byTurnVotes = rooms[currentRoomId].votes.conversation.byturn;
@@ -121,6 +141,7 @@ exports.handle = (socket) => {
     } else {
       let socketIndex = rooms[currentRoomId].sockets.indexOf(socket);
       rooms[currentRoomId].sockets.splice(socketIndex, 1);
+      delete rooms[currentRoomId].votingState[socketIndex];
 
       rooms[currentRoomId].sockets.forEach((socket) => {
         if (socket) {

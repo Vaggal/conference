@@ -8,6 +8,7 @@ class Room {
     this.chat = chat;
     this.usersCount = 0;
     this.sockets = [];
+    this.votingState = {};
   }
 }
 module.exports = Room;
