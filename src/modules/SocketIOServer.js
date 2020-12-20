@@ -15,5 +15,6 @@ exports.start = (socketServer) => {
         next();
       });
       events.handle(socket);
+      // TODO: here we should somehow export a function so that the webserver can determine if a roomIdd exists or not
     });
 };
