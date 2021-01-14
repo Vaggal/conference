@@ -1,5 +1,5 @@
 const Room = require("../models/Room");
-const Votes = require("../models/Votes");
+const User = require("../models/User");
 const Conversation = require("../models/Conversation");
 const Chat = require("../models/Chat");
 const Comment = require("../models/Comment");
@@ -12,8 +12,7 @@ exports.handle = (socket) => {
   // The use of 'fn' callback is explained here: https://socket.io/docs/#Sending-and-getting-data-acknowledgements
   // These events are emitted by the client code in conference-vue project
   socket.on("init", (data, fn) => {
-    let existingRoom = data ? true : false;
-
+    let existingRoom = data.room ? true : false;
     if (existingRoom) {
       socket.join(data.room);
       currentRoomId = data.room;
@@ -21,21 +20,17 @@ exports.handle = (socket) => {
         console.log("NOT ROOM!");
         return;
       }
-      rooms[currentRoomId].usersCount++;
-      rooms[currentRoomId].votes.peers[rooms[currentRoomId].usersCount] = 0;
-      rooms[currentRoomId].votingState[rooms[currentRoomId].usersCount] = {
-        forPeer: false,
-        forConversation: false,
-      };
+      rooms[currentRoomId].usersIncrement++;
+      let newUser = new User(
+        rooms[currentRoomId].usersIncrement,
+        data.username,
+        socket
+      );
+      rooms[currentRoomId].users.push(newUser);
 
-      fn(
-        currentRoomId,
-        rooms[currentRoomId].usersCount,
-        rooms[currentRoomId].conversation
-      ); // It returns as an ack the room and user id to the client
+      fn(currentRoomId, newUser.id, rooms[currentRoomId].conversation); // It returns as an ack the room,the user id and the conversation to the client
 
-      emitConnectionEvent(rooms[currentRoomId]); // We emit the connection event to the rest of the sockets before adding the new one
-      rooms[currentRoomId].sockets.push(socket);
+      emitConnectionEvent(rooms[currentRoomId], newUser.id); // We emit the connection event to the rest of the sockets before adding the new one
       emitVotesUpdateEvent(rooms[currentRoomId]);
       // TODO: emit init event
 
@@ -43,36 +38,32 @@ exports.handle = (socket) => {
         "Peer connected to room",
         currentRoomId,
         "with #",
-        rooms[currentRoomId].usersCount
+        rooms[currentRoomId].usersIncrement
       );
     } else {
-      let roomObj = new Room(new Votes(), new Conversation(), new Chat());
+      let roomObj = new Room(new Conversation(), new Chat());
       currentRoomId = roomObj.id;
       socket.join(currentRoomId);
       rooms[currentRoomId] = roomObj;
-      rooms[currentRoomId].votes.peers[0] = 0;
-      rooms[currentRoomId].votingState[0] = {
-        forPeer: false,
-        forConversation: false, // TODO: This will be used to check for user tryng to double vote
-      };
+      let newUser = new User(
+        rooms[currentRoomId].usersIncrement,
+        data.username,
+        socket
+      );
+      rooms[currentRoomId].users.push(newUser);
 
-      rooms[currentRoomId].sockets.push(socket);
-
-      fn(
-        currentRoomId,
-        rooms[currentRoomId].usersCount,
-        rooms[currentRoomId].conversation
-      ); // It returns as an ack the room,the user id and the conversation to the client
+      fn(currentRoomId, newUser.id, rooms[currentRoomId].conversation); // It returns as an ack the room,the user id and the conversation to the client
 
       console.log("Room created, with #", currentRoomId);
     }
   });
 
   socket.on("msg", (data) => {
-    var to = parseInt(data.to, 10);
-    if (rooms[currentRoomId] && rooms[currentRoomId].sockets[to]) {
+    let to = parseInt(data.to, 10);
+    let user = rooms[currentRoomId].users.find((user) => user.id === to);
+    if (rooms[currentRoomId] && user.socket) {
       console.log("Redirecting message to", to, "by", data.by);
-      rooms[currentRoomId].sockets[to].emit("msg", data);
+      user.socket.emit("msg", data);
     } else {
       console.warn("Invalid user");
     }
@@ -84,32 +75,32 @@ exports.handle = (socket) => {
     emitCommentEvent(rooms[currentRoomId], comment);
   });
 
-  socket.on("votes.increment", (user) => {
-    rooms[currentRoomId].votes.peers[user.id]++;
+  socket.on("votes.increment", (peer) => {
+    rooms[currentRoomId].users.find((user) => user.id === peer.id).votes++;
     emitVotesUpdateEvent(rooms[currentRoomId]);
   });
 
   socket.on("conversation.type.selected", (data) => {
-    if (rooms[currentRoomId].votingState[data.by].forConversation) {
+    let user = rooms[currentRoomId].users.find((user) => user.id === data.by);
+    if (user.votingState.forConversation) {
       // We need to subtract from the other type as the user changed their selection
       if (data.conversation.type == "loose") {
-        rooms[currentRoomId].votes.conversation["byturn"]--;
+        rooms[currentRoomId].conversation.votes.byturn--;
       } else {
-        rooms[currentRoomId].votes.conversation["loose"]--;
+        rooms[currentRoomId].conversation.votes.loose--;
       }
     } else {
-      rooms[currentRoomId].votingState[data.by].forConversation = true;
+      user.votingState.forConversation = true;
     }
+    rooms[currentRoomId].conversation.votes[data.conversation.type]++;
 
-    rooms[currentRoomId].votes.conversation[data.conversation.type]++;
-
-    let looseVotes = rooms[currentRoomId].votes.conversation.loose;
-    let byTurnVotes = rooms[currentRoomId].votes.conversation.byturn;
+    let looseVotes = rooms[currentRoomId].conversation.votes.loose;
+    let byTurnVotes = rooms[currentRoomId].conversation.votes.byturn;
     let totalConversationVotes = looseVotes + byTurnVotes;
 
     if (
-      totalConversationVotes === rooms[currentRoomId].usersCount + 1 &&
-      rooms[currentRoomId].usersCount + 1 >= 2
+      totalConversationVotes === rooms[currentRoomId].users.length &&
+      rooms[currentRoomId].users.length >= 2
     ) {
       let type = "";
       if (looseVotes > byTurnVotes) {
@@ -134,60 +125,69 @@ exports.handle = (socket) => {
       return;
     }
     console.log("Peer disconnected from room", currentRoomId);
-
     socket.leaveAll();
-    if (rooms[currentRoomId].sockets.length === 1) {
+    if (rooms[currentRoomId].users.length === 1) {
       delete rooms[currentRoomId];
     } else {
-      let socketIndex = rooms[currentRoomId].sockets.indexOf(socket);
-      rooms[currentRoomId].sockets.splice(socketIndex, 1);
-      delete rooms[currentRoomId].votingState[socketIndex];
+      let disconnectedUser = rooms[currentRoomId].users.find(
+        (user) => user.socket === socket
+      );
+      let disconnectedUserIndex = rooms[currentRoomId].users.indexOf(
+        disconnectedUser
+      );
+      rooms[currentRoomId].users.splice(disconnectedUserIndex, 1);
 
-      rooms[currentRoomId].sockets.forEach((socket) => {
-        if (socket) {
-          socket.emit("peer.disconnected", {
-            id: rooms[currentRoomId].usersCount,
+      rooms[currentRoomId].users.forEach((user) => {
+        if (user.socket) {
+          user.socket.emit("peer.disconnected", {
+            id: disconnectedUser.id,
           });
         }
       });
     }
   });
 
-  function emitConnectionEvent(room) {
-    room.sockets.forEach((socket) => {
-      socket.emit("peer.connected", {
-        id: room.usersCount,
-      });
+  function emitConnectionEvent(room, connectedUserId) {
+    room.users.forEach((user) => {
+      if (user.id !== connectedUserId) {
+        user.socket.emit("peer.connected", {
+          id: connectedUserId,
+        });
+      }
     });
   }
 
   function emitVotesUpdateEvent(room) {
-    room.sockets.forEach((socket) => {
-      socket.emit("votes.update", room.votes.peers);
+    let votesData = [];
+    room.users.forEach((user) => {
+      votesData.push({ id: user.id, votes: user.votes });
+    });
+    room.users.forEach((user) => {
+      user.socket.emit("votes.update", votesData);
     });
   }
 
   function emitConversationType(room) {
-    room.sockets.forEach((socket) => {
-      socket.emit("conversation.type.set", room.conversation);
+    room.users.forEach((user) => {
+      user.socket.emit("conversation.type.set", room.conversation);
     });
   }
 
   function emitCommentEvent(room, comment) {
-    room.sockets.forEach((socket) => {
-      socket.emit("comment", comment);
+    room.users.forEach((user) => {
+      user.socket.emit("comment", comment);
     });
   }
 
   function emitTimeLeft(room, secondsLeft) {
-    room.sockets.forEach((socket) => {
-      socket.emit("time.left", secondsLeft);
+    room.users.forEach((user) => {
+      user.socket.emit("time.left", secondsLeft);
     });
   }
 
   function emitActivePeer(room, peerId) {
-    room.sockets.forEach((socket) => {
-      socket.emit("active.peer", peerId);
+    room.users.forEach((user) => {
+      user.socket.emit("active.peer", peerId);
     });
   }
 
@@ -195,9 +195,9 @@ exports.handle = (socket) => {
     let maxIds = [];
     let maxVotes = 0;
 
-    Object.entries(rooms[currentRoomId].votes.peers).forEach((entry) => {
-      let peerVotes = entry[1];
-      let peerId = entry[0];
+    rooms[currentRoomId].users.forEach((user) => {
+      let peerVotes = user.votes;
+      let peerId = user.id;
 
       if (peerVotes > maxVotes) {
         // We reset the array as we have found a new higher value
@@ -210,7 +210,7 @@ exports.handle = (socket) => {
       }
 
       // We reset the peer's votes
-      rooms[currentRoomId].votes.peers[peerId] = 0;
+      user.votes = 0;
     });
 
     // We select a random person from the array
