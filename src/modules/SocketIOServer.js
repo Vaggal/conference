@@ -12,6 +12,7 @@ exports.start = (socketServer) => {
         if (roomsKeys.length > 1) {
           events.setCurrentRoomId(roomsKeys[roomsKeys.length - 1]);
         }
+        // events.checkIfUserIsValid();
         next();
       });
       events.handle(socket);
