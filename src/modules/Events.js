@@ -17,7 +17,7 @@ exports.handle = (socket) => {
       socket.join(data.room);
       currentRoomId = data.room;
       if (!rooms[currentRoomId]) {
-        console.log("NOT ROOM!");
+        console.log("Not a valid room!");
         return;
       }
       rooms[currentRoomId].usersIncrement++;
