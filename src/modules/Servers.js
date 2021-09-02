@@ -30,5 +30,5 @@ exports.start = (config) => {
     console.log("Servers Listening on", config.PORT);
   });
 
-  socketIOServer.start(webServer);
+  socketIOServer.start(webServer, config);
 };

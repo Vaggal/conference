@@ -17,7 +17,7 @@ exports.handle = (socket) => {
       socket.join(data.room);
       currentRoomId = data.room;
       if (!rooms[currentRoomId]) {
-        console.log("NOT ROOM!");
+        console.log("Not a valid room!");
         return;
       }
       rooms[currentRoomId].usersIncrement++;
@@ -132,9 +132,8 @@ exports.handle = (socket) => {
       let disconnectedUser = rooms[currentRoomId].users.find(
         (user) => user.socket === socket
       );
-      let disconnectedUserIndex = rooms[currentRoomId].users.indexOf(
-        disconnectedUser
-      );
+      let disconnectedUserIndex =
+        rooms[currentRoomId].users.indexOf(disconnectedUser);
       rooms[currentRoomId].users.splice(disconnectedUserIndex, 1);
 
       rooms[currentRoomId].users.forEach((user) => {
