@@ -1,6 +1,6 @@
 {
   "name": "conference",
-  "version": "0.0.1",
+  "version": "0.2.4",
   "description": "Conferencing App",
   "scripts": {
     "start": "node src/main.js",
