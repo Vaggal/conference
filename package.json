@@ -6,6 +6,10 @@
     "start": "node src/main.js",
     "prettier": "prettier --write ."
   },
+  "engines": {
+    "node": ">= 15",
+    "npm": ">= 7"
+  },
   "main": "src/main.js",
   "author": "Vangelis Galanis",
   "dependencies": {
