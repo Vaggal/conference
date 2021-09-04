@@ -1,4 +1,5 @@
 {
   "SIGNALIG_SERVER_URL": "communicate.local",
-  "PORT": 5555
+  "PORT": 5555,
+  "CORS_URL": "http://localhost:8080"
 }
