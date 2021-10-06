@@ -1,7 +1,9 @@
 const events = require("./Events");
+const socket = require("socket.io");
+let socketio;
 
 exports.start = (webServer, config) => {
-  const socketio = require("socket.io")(webServer, {
+  socketio = socket(webServer, {
     log: false,
     cors: {
       origin: config.CORS_URL,
@@ -22,4 +24,8 @@ exports.start = (webServer, config) => {
     events.handle(socket);
     // TODO: here we should somehow export a function so that the webserver can determine if a roomId exists or not
   });
+};
+
+exports.close = () => {
+  socketio.close();
 };

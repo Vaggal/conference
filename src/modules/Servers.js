@@ -32,3 +32,8 @@ exports.start = (config) => {
 
   socketIOServer.start(webServer, config);
 };
+
+exports.close = () => {
+  webServer.close();
+  socketIOServer.close();
+};

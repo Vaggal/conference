@@ -3,7 +3,7 @@
   "version": "0.2.4",
   "description": "Conferencing App",
   "scripts": {
-    "start": "node src/main.js",
+    "start": "nodemon src/main.js",
     "prettier": "prettier --write ."
   },
   "engines": {
@@ -23,6 +23,7 @@
     "eslint-config-prettier": "^8.1.0",
     "eslint-loader": "^4.0.2",
     "eslint-plugin-prettier": "^3.1.4",
+    "nodemon": "^2.0.13",
     "prettier": "^2.1.2"
   }
 }
